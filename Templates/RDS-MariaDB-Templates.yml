@@ -1,0 +1,192 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description:
+  RDS for  MariaDB Create
+
+Metadata:
+  "AWS::CloudFormation::Interface":
+    ParameterGroups:
+      - Label:
+          default: "Project Name Prefix"
+        # ※PJPrefixの値を各サービスで統一することで各サービスの連携可※
+        Parameters:
+          - PJPrefix
+      - Label:
+          default: "RDS Configuration"
+        Parameters:
+          - DBInstanceName
+          - MariaDBMajorVersion
+          - MariaDBMinorVersion
+          - DBInstanceClass
+          - DBInstanceStorageSize
+          - DBInstanceStorageType
+          - DBName
+          - DBMasterUserName
+          - DBPassword
+          - MultiAZ
+    ParameterLabels:
+      DBInstanceName:
+        default: "DBInstanceName"
+      MariaDBMajorVersion:
+        default: "MariaDBMajorVersion"
+      MariaDBMinorVersion:
+        default: "MariaDBMinorVersion"
+      DBInstanceClass:
+        default: "DBInstanceClass"
+      DBInstanceStorageSize:
+        default: "DBInstanceStorageSize"
+      DBInstanceStorageType:
+        default: "DBInstanceStorageType"
+      DBName:
+        default: "DBName"
+      DBMasterUserName:
+        default: "DBUserName"
+      DBPassword:
+        default: "DBPassword"
+      MultiAZ:
+        default: "MultiAZ"
+
+# ------------------------------------------------------------#
+# Input Parameters
+# ------------------------------------------------------------# 
+Parameters:
+  # 構築するプロジェクトの環境を識別するために各コンポーネントの先頭に付与する識別子
+  PJPrefix:
+    Type: String
+
+  DBInstanceName:
+    Type: String
+    Default: "rds"
+  MariaDBMajorVersion:
+    Type: String
+    Default: "10.3"
+    # AllowedValues: [ "10.3", "10.2", "10.1","10.0" ]
+  MariaDBMinorVersion:
+    Type: String
+    Default: "8"
+  DBInstanceClass:
+    Type: String
+    Default: "db.t2.small"
+  DBInstanceStorageSize:
+    Type: String
+    Default: "20"
+  DBInstanceStorageType:
+    Type: String
+    Default: "gp2"
+  DBName:
+    Type: String
+    Default: "db"
+  DBMasterUserName:
+    Type: String
+    Default: "dbuser"
+    NoEcho: true
+    MinLength: 1
+    MaxLength: 16
+    AllowedPattern: "[a-zA-Z][a-zA-Z0-9]*"
+    ConstraintDescription: "must begin with a letter and contain only alphanumeric characters."
+  DBPassword: 
+    Default: "dbpassword"
+    NoEcho: true
+    Type: String
+    MinLength: 8
+    MaxLength: 41
+    AllowedPattern: "[a-zA-Z0-9]*"
+    ConstraintDescription: "must contain only alphanumeric characters."
+  MultiAZ: 
+    Default: "false"
+    Type: String
+    AllowedValues: [ "true", "false" ]
+
+Resources: 
+# ------------------------------------------------------------#
+#  DBInstance MariaDB
+# ------------------------------------------------------------#
+  DBInstance: 
+    Type: "AWS::RDS::DBInstance"
+    Properties: 
+      DBInstanceIdentifier: !Sub "${PJPrefix}-${DBInstanceName}"
+      Engine: MariaDB
+      EngineVersion: !Sub "${MariaDBMajorVersion}.${MariaDBMinorVersion}"
+      DBInstanceClass: !Ref DBInstanceClass
+      AllocatedStorage: !Ref DBInstanceStorageSize
+      StorageType: !Ref DBInstanceStorageType
+      DBName: !Ref DBName
+      MasterUsername: !Ref DBMasterUserName
+      MasterUserPassword: !Ref DBPassword
+      DBSubnetGroupName: !Ref DBSubnetGroup
+      PubliclyAccessible: false
+      MultiAZ: !Ref MultiAZ
+      # バックアップ有効時の自動バックアップ作成時間
+      # PreferredBackupWindow: "18:00-18:30"
+      # メンテナンス
+      # PreferredMaintenanceWindow: "sat:19:00-sat:19:30"
+      # マイナーエンジンアップグレードの適用について
+      # AutoMinorVersionUpgrade: false
+      DBParameterGroupName: !Ref DBParameterGroup  
+      VPCSecurityGroups:
+        - !Ref RDSSecurityGroup
+      CopyTagsToSnapshot: true
+      BackupRetentionPeriod: 7
+      Tags: 
+        - Key: "Name"
+          Value: !Ref DBInstanceName
+    DeletionPolicy: "Delete"
+
+# ------------------------------------------------------------#
+#  DBParameterGroup
+# ------------------------------------------------------------#
+  DBParameterGroup:
+    Type: "AWS::RDS::DBParameterGroup"
+    Properties:
+      Family: !Sub "MariaDB${MariaDBMajorVersion}"
+      Description: !Sub "${PJPrefix}-${DBInstanceName}-parm"
+
+# ------------------------------------------------------------#
+#  SecurityGroup for RDS (MariaDB)
+# ------------------------------------------------------------#
+  RDSSecurityGroup:
+    Type: "AWS::EC2::SecurityGroup"
+    Properties:
+      VpcId: { "Fn::ImportValue": !Sub "${PJPrefix}-vpc" }
+      GroupName: !Sub "${PJPrefix}-${DBInstanceName}-sg"
+      GroupDescription: "-"
+      Tags:
+        - Key: "Name"
+          Value: !Sub "${PJPrefix}-${DBInstanceName}-sg"
+# Rule
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 3306
+          ToPort: 3306
+          CidrIp: { "Fn::ImportValue": !Sub "${PJPrefix}-vpc-cidr" }
+
+# ------------------------------------------------------------#
+#  DBSubnetGroup
+# ------------------------------------------------------------#
+  DBSubnetGroup: 
+    Type: "AWS::RDS::DBSubnetGroup"
+    Properties: 
+      DBSubnetGroupName: !Sub "${PJPrefix}-${DBInstanceName}-subnet"
+      DBSubnetGroupDescription: "-"
+      SubnetIds: 
+        - { "Fn::ImportValue": !Sub "${PJPrefix}-private-subnet-a" }
+        - { "Fn::ImportValue": !Sub "${PJPrefix}-private-subnet-c" }
+
+# ------------------------------------------------------------#
+# Output Parameters
+# ------------------------------------------------------------#                
+Outputs:
+#DBInstance
+  DBInstanceID:
+    Value: !Ref DBInstance
+    Export:
+      Name: !Sub "${PJPrefix}-${DBInstanceName}-id"
+
+  DBInstanceEndpoint:
+    Value: !GetAtt DBInstance.Endpoint.Address
+    Export:
+      Name: !Sub "${PJPrefix}-${DBInstanceName}-endpoint"
+
+  DBName:
+    Value: !Ref DBName
+    Export:
+      Name: !Sub "${PJPrefix}-${DBInstanceName}-dbname"
