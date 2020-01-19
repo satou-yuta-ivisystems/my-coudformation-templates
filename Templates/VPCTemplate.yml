@@ -7,7 +7,6 @@ Metadata:
     ParameterGroups: 
       - Label: 
           default: "Project Name Prefix"
-        # ※PJPrefixの値を各サービスで統一することで各サービスの連携可※
         Parameters: 
           - PJPrefix
       - Label: 
@@ -39,23 +38,23 @@ Parameters:
 
   VPCCIDR:
     Type: String
-    Default: "10.1.0.0/16"
+    Default: "10.0.0.0/16"
 
   PublicSubnetACIDR:
     Type: String
-    Default: "10.1.10.0/24"
+    Default: "10.0.0.0/24"
 
   PublicSubnetCCIDR:
     Type: String
-    Default: "10.1.20.0/24"
+    Default: "10.0.1.0/24"
 
   PrivateSubnetACIDR:
     Type: String
-    Default: "10.1.100.0/24"
+    Default: "10.0.2.0/24"
 
   PrivateSubnetCCIDR:
     Type: String
-    Default: "10.1.200.0/24"
+    Default: "10.0.3.0/24"
 
 Resources: 
 # ------------------------------------------------------------#
@@ -66,8 +65,10 @@ Resources:
     Type: "AWS::EC2::VPC"
     Properties: 
       CidrBlock: !Ref VPCCIDR
-      EnableDnsSupport: "true"
-      EnableDnsHostnames: "true"
+      EnableDnsSupport: "false"
+      # EnableDnsSupport: "true"
+      EnableDnsHostnames: "false"
+      # EnableDnsHostnames: "true"
       InstanceTenancy: default
       Tags: 
         - Key: Name

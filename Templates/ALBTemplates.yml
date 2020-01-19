@@ -3,12 +3,10 @@ Description:
   ALB and EC2 Instance Create
 
 Metadata:
-# 設定値
   "AWS::CloudFormation::Interface":
     ParameterGroups:
       - Label:
           default: "Project Name Prefix"
-        # ※PJPrefixの値を各サービスで統一することで各サービスの連携可※
         Parameters:
           - PJPrefix
       - Label:
@@ -61,7 +59,6 @@ Resources:
 # ------------------------------------------------------------#
 #  SecurityGroup for Web
 # ------------------------------------------------------------#
-# EC2側のセキュリティグループをそのまま使用するため使用しない
   # WebSecurityGroup:
   #   Type: "AWS::EC2::SecurityGroup"
   #   Properties:

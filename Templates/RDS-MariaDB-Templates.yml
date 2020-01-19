@@ -7,7 +7,6 @@ Metadata:
     ParameterGroups:
       - Label:
           default: "Project Name Prefix"
-        # ※PJPrefixの値を各サービスで統一することで各サービスの連携可※
         Parameters:
           - PJPrefix
       - Label:
@@ -115,12 +114,9 @@ Resources:
       DBSubnetGroupName: !Ref DBSubnetGroup
       PubliclyAccessible: false
       MultiAZ: !Ref MultiAZ
-      # バックアップ有効時の自動バックアップ作成時間
-      # PreferredBackupWindow: "18:00-18:30"
-      # メンテナンス
-      # PreferredMaintenanceWindow: "sat:19:00-sat:19:30"
-      # マイナーエンジンアップグレードの適用について
-      # AutoMinorVersionUpgrade: false
+      PreferredBackupWindow: "18:00-18:30"
+      PreferredMaintenanceWindow: "sat:19:00-sat:19:30"
+      AutoMinorVersionUpgrade: false
       DBParameterGroupName: !Ref DBParameterGroup  
       VPCSecurityGroups:
         - !Ref RDSSecurityGroup
