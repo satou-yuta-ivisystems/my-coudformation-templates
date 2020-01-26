@@ -50,21 +50,28 @@ Parameters:
   KeyPairName:
     Type: AWS::EC2::KeyPair::KeyName
     Default: "myVPC_key"
+
   EC2InstanceName:
     Type: String
     Default: "ec2-template"
+
   EC2InstanceAMI:
-    Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
+    # Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
+    Type: AWS::SSM::Parameter::Value<String>
     Default: "/aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2"
+
   EC2InstanceInstanceType:
     Type: String
     Default: "t2.micro"
+
   EC2InstanceVolumeType:
     Type: String
     Default: "gp2"
+
   EC2InstanceVolumeSize:
     Type: String
     Default: "30"
+    
   EC2InstanceSubnet:
     Type: String
     Default: "public-subnet-a"
@@ -77,45 +84,9 @@ Parameters:
 
   SSHAccessSourceIP:
     Type: String
-    Default: 0.0.0.0/0
+    Default: "0.0.0.0/0"
 
 Resources:
-# ------------------------------------------------------------#
-#  IAM Role for EC2
-# ------------------------------------------------------------# 
-  EC2IAMRole: 
-    Type: "AWS::IAM::Role"
-    Properties: 
-      RoleName: !Sub "${PJPrefix}-${EC2InstanceName}-role" 
-      AssumeRolePolicyDocument:
-        Version: "2012-10-17"
-        Statement: 
-          - Effect: Allow
-            Principal: 
-              Service: 
-                - "ec2.amazonaws.com"
-                - "rds.amazonaws.com"
-                - "s3.amazonaws.com"
-                - "cloudformation.amazonaws.com"
-                - "elasticloadbalancing.amazonaws.com"
-            Action: 
-              - "sts:AssumeRole"
-      # ロールへのパス
-      Path: "/"
-      # ユーザーにアタッチする IAM 管理ポリシーの Amazon リソースネーム (ARN) のリスト
-      ManagedPolicyArns: 
-        - "arn:aws:iam::aws:policy/service-role/AmazonEC2RoleforSSM"
-        # - "arn:aws:iam::aws:policy/AmazonEC2ReadOnlyAccess"
-        - "arn:aws:iam::aws:policy/AmazonEC2FullAccess"
-
-  EC2InstanceProfile: 
-    Type: "AWS::IAM::InstanceProfile"
-    Properties: 
-      Path: "/"
-      Roles: 
-        - Ref: EC2IAMRole
-      InstanceProfileName: !Sub "${PJPrefix}-${EC2InstanceName}-profile"
-
 # ------------------------------------------------------------#
 #  EC2Instance
 # ------------------------------------------------------------#
@@ -125,10 +96,11 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub "${PJPrefix}-${EC2InstanceName}"
+          
       ImageId: !Ref EC2InstanceAMI
       InstanceType: !Ref EC2InstanceInstanceType
       KeyName: !Ref KeyPairName
-      IamInstanceProfile: !Ref EC2InstanceProfile
+      # IamInstanceProfile: !Ref EC2InstanceProfile
       DisableApiTermination: false
       EbsOptimized: false
       BlockDeviceMappings:
@@ -137,22 +109,22 @@ Resources:
             DeleteOnTermination: true
             VolumeType: !Ref EC2InstanceVolumeType
             VolumeSize: !Ref EC2InstanceVolumeSize
-      #パブリックIPを有効化したいとき以下は使えない
-      # SecurityGroupIds:
-      #   - !Ref ManagedSecurityGroup
+
       NetworkInterfaces:
         - AssociatePublicIpAddress: !Ref EC2InstancePublicIpAddress
           DeviceIndex: "0"
           SubnetId: { "Fn::ImportValue": !Sub "${PJPrefix}-${EC2InstanceSubnet}" }
           GroupSet:
            - !Ref ManagedSecurityGroup
+
       # SubnetId: { "Fn::ImportValue": !Sub "${PJPrefix}-${EC2InstanceSubnet}" }
       UserData: !Base64 | 
         #! /bin/bash
         yum update -y
-        sudo amazon-linux-extras install nginx1 -y
+        sudo amazon-linux-extras install nginx1.12 -y
         sudo systemctl start nginx
         sudo yum install mariadb-server -y
+
 # ------------------------------------------------------------#
 #  SecurityGroup for Managed
 # ------------------------------------------------------------#
@@ -182,22 +154,6 @@ Resources:
           FromPort: 8000
           ToPort: 8000
           CidrIp: "0.0.0.0/0"
-
-# ------------------------------------------------------------#
-#  ElasticIP
-# ------------------------------------------------------------# 
-#練習中はElasticIPは使用しないのでコメントアウト
-  # ElasticIP:
-  #   Type: "AWS::EC2::EIP"
-  #   Properties:
-  #     Domain: vpc
-
-  # ElasticIPAssociate:
-  #   Type: AWS::EC2::EIPAssociation
-  #   Properties: 
-  #     AllocationId: !GetAtt ElasticIP.AllocationId
-  #     InstanceId: !Ref EC2Instance
-
 # ------------------------------------------------------------#
 # Output Parameters
 # ------------------------------------------------------------#                
@@ -212,13 +168,3 @@ Outputs:
     Value: !GetAtt EC2Instance.PrivateIp
     Export:
       Name: !Sub "${PJPrefix}-${EC2InstanceName}-private-ip"
-
-  # EC2InstanceEIP:
-  #   Value: !GetAtt EC2Instance.PublicIp
-  #   Export:
-  #     Name: !Sub "${PJPrefix}-${EC2InstanceName}-eip"
-
-  EC2InstanceRoleName:
-    Value: !Sub "${PJPrefix}-${EC2InstanceName}-role"
-    Export:
-      Name: !Sub "${PJPrefix}-${EC2InstanceName}-role-name"

@@ -4,7 +4,7 @@ Description:
 
 Metadata: 
   "AWS::CloudFormation::Interface": 
-    ParameterGroups: 
+    ParameterGroups:
       - Label: 
           default: "Project Name Prefix"
         Parameters: 
@@ -38,25 +38,29 @@ Parameters:
 
   VPCCIDR:
     Type: String
-    Default: "10.0.0.0/16"
+    Default: "10.1.0.0/16"
 
   PublicSubnetACIDR:
     Type: String
-    Default: "10.0.0.0/24"
+    Default: "10.1.1.0/24"
 
   PublicSubnetCCIDR:
     Type: String
-    Default: "10.0.1.0/24"
+    Default: "10.1.2.0/24"
 
   PrivateSubnetACIDR:
     Type: String
-    Default: "10.0.2.0/24"
+    Default: "10.1.3.0/24"
 
   PrivateSubnetCCIDR:
     Type: String
-    Default: "10.0.3.0/24"
+    Default: "10.1.4.0/24"
 
+# ------------------------------------------------------------#
+#  リソース
+# ------------------------------------------------------------#
 Resources: 
+
 # ------------------------------------------------------------#
 #  VPC
 # ------------------------------------------------------------#
@@ -65,7 +69,7 @@ Resources:
     Type: "AWS::EC2::VPC"
     Properties: 
       CidrBlock: !Ref VPCCIDR
-      EnableDnsSupport: "false"
+      EnableDnsSupport: "true"
       # EnableDnsSupport: "true"
       EnableDnsHostnames: "false"
       # EnableDnsHostnames: "true"
@@ -98,7 +102,7 @@ Resources:
     Properties: 
       AvailabilityZone: "ap-northeast-1a"
       CidrBlock: !Ref PublicSubnetACIDR
-      VpcId: !Ref VPC 
+      VpcId: !Ref VPC
       Tags: 
         - Key: Name
           Value: !Sub "${PJPrefix}-public-subnet-a"
@@ -139,92 +143,66 @@ Resources:
 # ------------------------------------------------------------#
 #  RouteTable
 # ------------------------------------------------------------#          
-# Public RouteTableA Create
-  PublicRouteTableA: 
+# Public RouteTable Create
+  PublicRouteTable: 
     Type: "AWS::EC2::RouteTable"
     Properties: 
       VpcId: !Ref VPC 
       Tags: 
         - Key: Name
-          Value: !Sub "${PJPrefix}-public-route-a"
+          Value: !Sub "${PJPrefix}-public-route"
 
-# Public RouteTableC Create
-  PublicRouteTableC: 
+# Private RouteTable Create
+  PrivateRouteTable: 
     Type: "AWS::EC2::RouteTable"
     Properties: 
       VpcId: !Ref VPC 
       Tags: 
         - Key: Name
-          Value: !Sub "${PJPrefix}-public-route-c"
+          Value: !Sub "${PJPrefix}-private-route"
 
-# Private RouteTableA Create
-  PrivateRouteTableA: 
-    Type: "AWS::EC2::RouteTable"
-    Properties: 
-      VpcId: !Ref VPC 
-      Tags: 
-        - Key: Name
-          Value: !Sub "${PJPrefix}-private-route-a"
-
-# Private RouteTableC Create
-  PrivateRouteTableC: 
-    Type: "AWS::EC2::RouteTable"
-    Properties: 
-      VpcId: !Ref VPC 
-      Tags: 
-        - Key: Name
-          Value: !Sub "${PJPrefix}-private-route-c"
 
 # ------------------------------------------------------------#
 # Routing
 # ------------------------------------------------------------# 
-# PublicRouteA Create
-  PublicRouteA: 
-    Type: "AWS::EC2::Route"
-    Properties: 
-      RouteTableId: !Ref PublicRouteTableA 
-      DestinationCidrBlock: "0.0.0.0/0"
-      GatewayId: !Ref InternetGateway 
 
-# PublicRouteC Create
-  PublicRouteC: 
+# PublicRoute Create
+  PublicRoute: 
     Type: "AWS::EC2::Route"
     Properties: 
-      RouteTableId: !Ref PublicRouteTableC 
+      RouteTableId: !Ref PublicRouteTable
       DestinationCidrBlock: "0.0.0.0/0"
       GatewayId: !Ref InternetGateway
 
 # ------------------------------------------------------------#
 # RouteTable Associate
 # ------------------------------------------------------------# 
-# PublicRouteTable Associate SubnetA
-  PublicSubnetARouteTableAssociation: 
+# PublicRouteTable Associate Subnet
+  PublicSubnetRouteATableAssociation: 
     Type: "AWS::EC2::SubnetRouteTableAssociation"
-    Properties: 
-      SubnetId: !Ref PublicSubnetA 
-      RouteTableId: !Ref PublicRouteTableA
-
-# PublicRouteTable Associate SubnetC
-  PublicSubnetCRouteTableAssociation: 
+    Properties:
+      SubnetId: !Ref PublicSubnetA
+      RouteTableId: !Ref PublicRouteTable
+  
+  PublicSubnetRouteCTableAssociation: 
     Type: "AWS::EC2::SubnetRouteTableAssociation"
-    Properties: 
-      SubnetId: !Ref PublicSubnetC 
-      RouteTableId: !Ref PublicRouteTableC
+    Properties:
+      SubnetId: !Ref PublicSubnetC
+      RouteTableId: !Ref PublicRouteTable
 
-# PrivateRouteTable Associate SubnetA
-  PrivateSubnetARouteTableAssociation: 
+# PrivateRouteTable Associate Subnet
+  PrivateSubnetRouteATableAssociation: 
     Type: "AWS::EC2::SubnetRouteTableAssociation"
     Properties: 
       SubnetId: !Ref PrivateSubnetA
-      RouteTableId: !Ref PrivateRouteTableA 
+      RouteTableId: !Ref PrivateRouteTable
 
-# PrivateRouteTable Associate SubnetC
-  PrivateSubnetCRouteTableAssociation: 
+  PrivateSubnetRouteCTableAssociation: 
     Type: "AWS::EC2::SubnetRouteTableAssociation"
     Properties: 
       SubnetId: !Ref PrivateSubnetC
-      RouteTableId: !Ref PrivateRouteTableC
-
+      RouteTableId: !Ref PrivateRouteTable
+  
 
 # ------------------------------------------------------------#
 # Output Parameters
@@ -283,22 +261,12 @@ Outputs:
       Name: !Sub "${PJPrefix}-private-subnet-c-cidr"
 
 # Route
-  PublicRouteTableA:
-    Value: !Ref PublicRouteTableA
+  PublicRouteTable:
+    Value: !Ref PublicRouteTable
     Export:
-      Name: !Sub "${PJPrefix}-public-route-a"
+      Name: !Sub "${PJPrefix}-public-route"
 
-  PublicRouteTableC:
-    Value: !Ref PublicRouteTableC
+  PrivateRouteTable:
+    Value: !Ref PrivateRouteTable
     Export:
-      Name: !Sub "${PJPrefix}-public-route-c"
-
-  PrivateRouteTableA:
-    Value: !Ref PrivateRouteTableA
-    Export:
-      Name: !Sub "${PJPrefix}-private-route-a"
-
-  PrivateRouteTableC:
-    Value: !Ref PrivateRouteTableC
-    Export:
-      Name: !Sub "${PJPrefix}-private-route-c"
+      Name: !Sub "${PJPrefix}-private-route"
